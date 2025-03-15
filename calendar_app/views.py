@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .models import Event
-from .forms import EventForm, UserRegistrationForm
+from .models import Event, CalendarGroup
+from .forms import EventForm, UserRegistrationForm, GroupForm
 from datetime import datetime, timedelta
 import json
 
@@ -21,9 +21,34 @@ def register(request):
         form = UserRegistrationForm()
     return render(request, 'calendar_app/register.html', {'form': form})
 
+def is_superuser(user):
+    return user.is_superuser
+
+@user_passes_test(is_superuser)
+def group_list(request):
+    groups = CalendarGroup.objects.filter(admin=request.user)
+    return render(request, 'calendar_app/group_list.html', {'groups': groups})
+
+@user_passes_test(is_superuser)
+def group_create(request):
+    if request.method == 'POST':
+        form = GroupForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.admin = request.user
+            group.save()
+            form.save_m2m()  # Save many-to-many relationships
+            return redirect('group-list')
+    else:
+        form = GroupForm()
+    return render(request, 'calendar_app/group_form.html', {'form': form})
+
 @login_required
 def calendar_view(request):
-    events = Event.objects.filter(user=request.user)
+    user_events = Event.objects.filter(user=request.user)
+    group_events = Event.objects.filter(group__members=request.user)
+    events = user_events | group_events
+    
     events_list = []
     for event in events:
         events_list.append({
