@@ -13,7 +13,7 @@ class UserRegistrationForm(UserCreationForm):
 class EventForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'description', 'start_time', 'end_time', 'color']
+        fields = ['title', 'description', 'start_time', 'end_time', 'color', 'group']
         widgets = {
             'start_time': forms.DateTimeInput(
                 attrs={'type': 'datetime-local', 'class': 'form-control'}
@@ -25,6 +25,14 @@ class EventForm(forms.ModelForm):
                 attrs={'type': 'color', 'class': 'form-control'}
             )
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user and user.is_superuser:
+            self.fields['group'].queryset = CalendarGroup.objects.filter(admin=user)
+        else:
+            self.fields['group'].widget = forms.HiddenInput()
 
 class GroupForm(forms.ModelForm):
     members = forms.ModelMultipleChoiceField(
