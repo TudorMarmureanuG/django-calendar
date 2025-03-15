@@ -4,12 +4,15 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-body">
-            <h2 class="card-title">Delete Event</h2>
-            <p>Are you sure you want to delete "{{ object.title }}"?</p>
+            <h2 class="card-title">Delete Group</h2>
+            <p>Are you sure you want to delete "{{ object.name }}"?</p>
+            <div class="alert alert-warning">
+                Warning: This will also delete all events associated with this group.
+            </div>
             <form method="post">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                <a href="{% url 'calendar' %}" class="btn btn-secondary">Cancel</a>
+                <a href="{% url 'group-list' %}" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
     </div>

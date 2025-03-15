@@ -7,10 +7,10 @@
             <div class="card">
                 <div class="card-body">
                     <h2 class="card-title">{% if form.instance.pk %}Edit Event{% else %}Create New Event{% endif %}</h2>
-                    <form method="POST">
+                    <form method="POST" id="eventForm">
                         {% csrf_token %}
                         {% for field in form %}
-                            <div class="mb-3">
+                            <div class="mb-3 {% if field.name == 'specific_members' %}specific-members-field{% endif %}">
                                 <label class="form-label">{{ field.label }}</label>
                                 {{ field }}
                                 {% if field.errors %}
@@ -22,13 +22,55 @@
                         {% endfor %}
                         <button type="submit" class="btn btn-primary">Save Event</button>
                         <a href="{% url 'calendar' %}" class="btn btn-secondary">Cancel</a>
-                        {% if form.instance.pk %}
-                            <a href="{% url 'event-delete' form.instance.pk %}" class="btn btn-danger float-end">Delete</a>
-                        {% endif %}
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const groupSelect = document.getElementById('group-select');
+    const isGroupWideCheckbox = document.querySelector('input[name="is_group_wide"]');
+    const specificMembersField = document.querySelector('.specific-members-field');
+    const specificMembersSelect = document.getElementById('specific-members-select');
+
+    async function updateSpecificMembers() {
+        if (!groupSelect.value) {
+            specificMembersField.style.display = 'none';
+            return;
+        }
+
+        if (isGroupWideCheckbox.checked) {
+            specificMembersField.style.display = 'none';
+        } else {
+            specificMembersField.style.display = 'block';
+            try {
+                const response = await fetch(`/api/group-members/${groupSelect.value}/`);
+                if (response.ok) {
+                    const members = await response.json();
+                    specificMembersSelect.innerHTML = '';
+                    members.forEach(member => {
+                        const option = new Option(member.username, member.id);
+                        specificMembersSelect.add(option);
+                    });
+                } else {
+                    console.error('Failed to fetch members');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    }
+
+    groupSelect.addEventListener('change', updateSpecificMembers);
+    isGroupWideCheckbox.addEventListener('change', updateSpecificMembers);
+
+    // Initial state
+    updateSpecificMembers();
+});
+</script>
 {% endblock %}

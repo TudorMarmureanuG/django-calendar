@@ -31,9 +31,7 @@
             {% endfor %}
         {% endif %}
         {% block content %}
-        <div class="calendar-container">
-            <div id='calendar'></div>
-        </div>
+        <div id='calendar'></div>
         {% endblock %}
     </div>
     {% block extra_js %}
@@ -46,16 +44,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
         var calendar = new FullCalendar.Calendar(calendarEl, {
-            plugins: [ 'dayGrid', 'timeGrid', 'interaction' ],
+            plugins: ['dayGrid', 'timeGrid', 'interaction'],
             header: {
                 left: 'prev,next today',
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
             },
             events: {{ events|safe }},
-            editable: true,
             eventClick: function(info) {
-                window.location.href = '/event/' + info.event.id + '/update/';
+                if (info.event.extendedProps.editable) {
+                    const deleteUrl = `/event/${info.event.id}/delete/`;
+                    const editUrl = `/event/${info.event.id}/update/`;
+                    
+                    if (confirm('Would you like to edit or delete this event?')) {
+                        window.location.href = editUrl;
+                    }
+                }
             }
         });
         calendar.render();

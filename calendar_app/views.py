@@ -8,6 +8,7 @@ from .models import Event, CalendarGroup
 from .forms import EventForm, UserRegistrationForm, GroupForm
 from datetime import datetime, timedelta
 import json
+from django.http import JsonResponse
 
 def register(request):
     if request.method == 'POST':
@@ -48,14 +49,20 @@ def calendar_view(request):
     # Get personal events
     user_events = Event.objects.filter(user=request.user)
     
-    # Get group events where user is a member
-    group_events = Event.objects.filter(group__members=request.user)
+    # Get group-wide events where user is a member
+    group_events = Event.objects.filter(
+        group__members=request.user,
+        is_group_wide=True
+    )
+    
+    # Get specific member events
+    specific_events = Event.objects.filter(specific_members=request.user)
     
     # Get events where user is the group admin
     admin_events = Event.objects.filter(group__admin=request.user) if request.user.is_superuser else Event.objects.none()
     
     # Combine all events
-    events = user_events | group_events | admin_events
+    events = user_events | group_events | specific_events | admin_events
     
     events_list = []
     for event in events.distinct():
@@ -67,7 +74,8 @@ def calendar_view(request):
             'color': event.color,
             'description': event.description,
             'editable': request.user.is_superuser or event.user == request.user,
-            'group': event.group.name if event.group else 'Personal'
+            'group': event.group.name if event.group else 'Personal',
+            'isGroupWide': event.is_group_wide if event.group else None
         })
     
     return render(request, 'calendar_app/calendar.html', {
@@ -91,8 +99,21 @@ class EventCreateView(LoginRequiredMixin, CreateView):
         return kwargs
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
+        event = form.save(commit=False)
+        event.user = self.request.user
+        event.save()
+        
+        # Handle specific members after saving the event
+        if not form.cleaned_data['is_group_wide'] and form.cleaned_data['group']:
+            selected_members = form.cleaned_data['specific_members']
+            event.specific_members.set(selected_members)
+        
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        # Add debugging for form errors
+        print(f"Form errors: {form.errors}")
+        return super().form_invalid(form)
 
 class EventUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Event
@@ -125,3 +146,25 @@ class EventDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
             self.request.user.is_superuser and 
             event.group.admin == self.request.user
         )
+
+@login_required
+def get_group_members(request, group_id):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        group = CalendarGroup.objects.get(id=group_id, admin=request.user)
+        members = group.members.all()
+        members_data = [{'id': member.id, 'username': member.username} for member in members]
+        return JsonResponse(members_data, safe=False)
+    except CalendarGroup.DoesNotExist:
+        return JsonResponse({'error': 'Group not found'}, status=404)
+
+class GroupDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = CalendarGroup
+    success_url = reverse_lazy('group-list')
+    template_name = 'calendar_app/group_confirm_delete.html'
+
+    def test_func(self):
+        group = self.get_object()
+        return self.request.user.is_superuser and group.admin == self.request.user

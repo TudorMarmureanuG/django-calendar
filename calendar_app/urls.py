@@ -13,4 +13,6 @@ urlpatterns = [
     path('event/new/', views.EventCreateView.as_view(), name='event-create'),
     path('event/<int:pk>/update/', views.EventUpdateView.as_view(), name='event-update'),
     path('event/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event-delete'),
+    path('api/group-members/<int:group_id>/', views.get_group_members, name='group-members'),
+    path('group/<int:pk>/delete/', views.GroupDeleteView.as_view(), name='group-delete'),
 ]

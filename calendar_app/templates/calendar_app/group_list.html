@@ -20,6 +20,9 @@
                         <li>{{ member.username }}</li>
                         {% endfor %}
                     </ul>
+                    <div class="mt-3">
+                        <a href="{% url 'group-delete' group.id %}" class="btn btn-danger">Delete Group</a>
+                    </div>
                 </div>
             </div>
         </div>
