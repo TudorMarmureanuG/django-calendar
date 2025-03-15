@@ -1,0 +1,17 @@
+{% extends "calendar_app/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">Delete Event</h2>
+            <p>Are you sure you want to delete "{{ object.title }}"?</p>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Delete</button>
+                <a href="{% url 'calendar' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
