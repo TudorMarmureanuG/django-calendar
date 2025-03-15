@@ -29,6 +29,7 @@ This Django application allows users to generate a timetable/calendar for each r
 
 4. Run migrations:
    ```
+   python manage.py makemigrations
    python manage.py migrate
    ```
 
