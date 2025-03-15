@@ -1,12 +1,14 @@
 # Django Calendar Application
 
-This Django application allows users to generate a timetable/calendar for each registered account, enabling them to add various events.
+This Django application allows users to generate a timetable/calendar for each registered account, enabling them to add various events and manage group event (works only for superusers).
 
 ## Features
 
 - User registration and authentication
 - Event creation and management
 - Calendar view displaying events
+* For Superusers only:
+   - Create groups and manage the events for the members of the groups
 
 ## Installation
 
