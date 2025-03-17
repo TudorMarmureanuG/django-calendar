@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
+from django.db.models import Q  # Add this import
 from .models import Event, CalendarGroup
 from .forms import EventForm, UserRegistrationForm, GroupForm
 from datetime import datetime, timedelta
@@ -46,20 +47,23 @@ def group_create(request):
 
 @login_required
 def calendar_view(request):
-    # Get personal events
+    # Get events created by the user
     user_events = Event.objects.filter(user=request.user)
     
-    # Get group-wide events where user is a member
+    # Get events where user is specifically selected
+    specific_events = Event.objects.filter(specific_members=request.user)
+    
+    # Get group-wide events for groups the user is a member of
     group_events = Event.objects.filter(
         group__members=request.user,
         is_group_wide=True
     )
     
-    # Get specific member events
-    specific_events = Event.objects.filter(specific_members=request.user)
-    
-    # Get events where user is the group admin
-    admin_events = Event.objects.filter(group__admin=request.user) if request.user.is_superuser else Event.objects.none()
+    # For superusers, get all events they created
+    if request.user.is_superuser:
+        admin_events = Event.objects.filter(user=request.user)
+    else:
+        admin_events = Event.objects.none()
     
     # Combine all events
     events = user_events | group_events | specific_events | admin_events
@@ -96,17 +100,31 @@ class EventCreateView(LoginRequiredMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
+        kwargs['is_superuser'] = self.request.user.is_superuser
         return kwargs
 
     def form_valid(self, form):
         event = form.save(commit=False)
         event.user = self.request.user
+        
+        if not self.request.user.is_superuser:
+            event.group = None
+            event.is_group_wide = False
+            event.save()
+            return super().form_valid(form)
+            
+        # Handle superuser events
         event.save()
         
-        # Handle specific members after saving the event
-        if not form.cleaned_data['is_group_wide'] and form.cleaned_data['group']:
-            selected_members = form.cleaned_data['specific_members']
-            event.specific_members.set(selected_members)
+        if form.cleaned_data['group']:
+            if form.cleaned_data['is_group_wide']:
+                event.specific_members.clear()
+            else:
+                selected_members = form.cleaned_data['specific_members']
+                if selected_members:
+                    event.specific_members.set(selected_members)
+                else:
+                    event.specific_members.clear()
         
         return super().form_valid(form)
 
@@ -124,20 +142,42 @@ class EventUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
+        kwargs['is_superuser'] = self.request.user.is_superuser
+        # Add read_only flag if user is not the creator and not superuser
+        kwargs['read_only'] = not self.request.user.is_superuser and self.get_object().user != self.request.user
         return kwargs
+
+    def get_queryset(self):
+        # Allow viewing for assigned users, editing for creators and superusers
+        base_query = Q(user=self.request.user)  # Own events
+        if not self.request.user.is_superuser:
+            base_query |= (
+                Q(specific_members=self.request.user) |  # Specifically assigned
+                Q(group__members=self.request.user, is_group_wide=True)  # Group-wide events
+            )
+        else:
+            base_query |= Q(user=self.request.user)  # Admin events
+        return Event.objects.filter(base_query).distinct()
 
     def test_func(self):
         event = self.get_object()
-        return self.request.user == event.user or (
-            event.group and 
-            self.request.user.is_superuser and 
-            event.group.admin == self.request.user
+        # Allow view access for assigned users
+        can_view = (
+            self.request.user.is_superuser or
+            event.user == self.request.user or
+            self.request.user in event.specific_members.all() or
+            (event.is_group_wide and event.group and self.request.user in event.group.members.all())
         )
+        return can_view
 
 class EventDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Event
     success_url = reverse_lazy('calendar')
     template_name = 'calendar_app/event_confirm_delete.html'
+
+    def get_queryset(self):
+        # Only allow deletion if user is the creator
+        return Event.objects.filter(user=self.request.user)  # changed from creator to user
 
     def test_func(self):
         event = self.get_object()
@@ -149,16 +189,14 @@ class EventDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 @login_required
 def get_group_members(request, group_id):
-    if not request.user.is_superuser:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
+    """API endpoint to get members of a specific group"""
     try:
-        group = CalendarGroup.objects.get(id=group_id, admin=request.user)
+        group = CalendarGroup.objects.get(id=group_id)
         members = group.members.all()
         members_data = [{'id': member.id, 'username': member.username} for member in members]
         return JsonResponse(members_data, safe=False)
     except CalendarGroup.DoesNotExist:
-        return JsonResponse({'error': 'Group not found'}, status=404)
+        return JsonResponse([], safe=False)
 
 class GroupDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = CalendarGroup

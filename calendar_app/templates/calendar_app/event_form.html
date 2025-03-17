@@ -9,8 +9,8 @@
                     <h2 class="card-title">{% if form.instance.pk %}Edit Event{% else %}Create New Event{% endif %}</h2>
                     <form method="POST" id="eventForm">
                         {% csrf_token %}
-                        {% for field in form %}
-                            <div class="mb-3 {% if field.name == 'specific_members' %}specific-members-field{% endif %}">
+                        {% for field in form.visible_fields %}
+                            <div class="mb-3">
                                 <label class="form-label">{{ field.label }}</label>
                                 {{ field }}
                                 {% if field.errors %}
@@ -20,8 +20,19 @@
                                 {% endif %}
                             </div>
                         {% endfor %}
-                        <button type="submit" class="btn btn-primary">Save Event</button>
-                        <a href="{% url 'calendar' %}" class="btn btn-secondary">Cancel</a>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                {% if not form.fields.title.disabled %}
+                                    <button type="submit" class="btn btn-primary">Save Event</button>
+                                {% endif %}
+                                <a href="{% url 'calendar' %}" class="btn btn-secondary">Back</a>
+                            </div>
+                            {% if form.instance.pk and not form.fields.title.disabled %}
+                                {% if user.is_superuser or form.instance.user == user %}
+                                    <button type="button" class="btn btn-danger" onclick="deleteEvent()">Delete</button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
                     </form>
                 </div>
             </div>
@@ -34,43 +45,79 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const groupSelect = document.getElementById('group-select');
-    const isGroupWideCheckbox = document.querySelector('input[name="is_group_wide"]');
-    const specificMembersField = document.querySelector('.specific-members-field');
     const specificMembersSelect = document.getElementById('specific-members-select');
+    const isGroupWideCheckbox = document.querySelector('input[name="is_group_wide"]');
 
-    async function updateSpecificMembers() {
-        if (!groupSelect.value) {
-            specificMembersField.style.display = 'none';
-            return;
-        }
-
-        if (isGroupWideCheckbox.checked) {
-            specificMembersField.style.display = 'none';
-        } else {
-            specificMembersField.style.display = 'block';
-            try {
-                const response = await fetch(`/api/group-members/${groupSelect.value}/`);
-                if (response.ok) {
-                    const members = await response.json();
-                    specificMembersSelect.innerHTML = '';
-                    members.forEach(member => {
-                        const option = new Option(member.username, member.id);
-                        specificMembersSelect.add(option);
-                    });
-                } else {
-                    console.error('Failed to fetch members');
-                }
-            } catch (error) {
-                console.error('Error:', error);
+    function updateSpecificMembersVisibility() {
+        if (specificMembersSelect) {
+            const specificMembersField = specificMembersSelect.closest('.mb-3');
+            if (isGroupWideCheckbox && isGroupWideCheckbox.checked) {
+                specificMembersField.style.display = 'none';
+                specificMembersSelect.disabled = true;
+            } else {
+                specificMembersField.style.display = 'block';
+                specificMembersSelect.disabled = false;
             }
         }
     }
 
-    groupSelect.addEventListener('change', updateSpecificMembers);
-    isGroupWideCheckbox.addEventListener('change', updateSpecificMembers);
+    if (groupSelect) {
+        groupSelect.addEventListener('change', async function() {
+            const groupId = this.value;
+            if (groupId) {
+                try {
+                    const response = await fetch(`/api/group-members/${groupId}/`);
+                    const members = await response.json();
+                    
+                    // Clear existing options
+                    specificMembersSelect.innerHTML = '';
+                    
+                    // Add new options
+                    members.forEach(member => {
+                        const option = new Option(member.username, member.id);
+                        specificMembersSelect.add(option);
+                    });
 
-    // Initial state
-    updateSpecificMembers();
+                    updateSpecificMembersVisibility();
+                } catch (error) {
+                    console.error('Error fetching group members:', error);
+                }
+            } else {
+                specificMembersSelect.innerHTML = '';
+                specificMembersSelect.closest('.mb-3').style.display = 'none';
+            }
+        });
+
+        // Initial load if group is selected
+        if (groupSelect.value) {
+            groupSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
+    if (isGroupWideCheckbox) {
+        isGroupWideCheckbox.addEventListener('change', updateSpecificMembersVisibility);
+        // Initial state
+        updateSpecificMembersVisibility();
+    }
 });
+
+function deleteEvent() {
+    if (confirm('Are you sure you want to delete this event?')) {
+        {% if form.instance.pk %}  // Only include this code if we have a pk
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'event_delete' form.instance.pk %}";
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        form.appendChild(csrfToken);
+        document.body.appendChild(form);
+        form.submit();
+        {% endif %}
+    }
+}
 </script>
 {% endblock %}

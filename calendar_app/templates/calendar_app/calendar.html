@@ -52,14 +52,7 @@
             },
             events: {{ events|safe }},
             eventClick: function(info) {
-                if (info.event.extendedProps.editable) {
-                    const deleteUrl = `/event/${info.event.id}/delete/`;
-                    const editUrl = `/event/${info.event.id}/update/`;
-                    
-                    if (confirm('Would you like to edit or delete this event?')) {
-                        window.location.href = editUrl;
-                    }
-                }
+                window.location.href = '/event/' + info.event.id + '/update/';  // Make sure this URL matches your urls.py pattern
             }
         });
         calendar.render();
