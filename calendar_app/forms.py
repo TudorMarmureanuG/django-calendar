@@ -33,8 +33,11 @@ class EventForm(forms.ModelForm):
         
         super().__init__(*args, **kwargs)
         
-        if self.instance.pk and self.instance.group and not self.instance.is_group_wide:
-            # Filter specific_members to only show group members
+        # Disable group selection when editing an existing group event
+        if self.instance.pk and self.instance.group:
+            self.fields['group'].disabled = True
+            self.fields['group'].widget.attrs['class'] = 'form-control disabled'
+            # Only show members of the current group
             self.fields['specific_members'].queryset = self.instance.group.members.all()
         
         if read_only:
@@ -55,8 +58,9 @@ class EventForm(forms.ModelForm):
             self.fields['specific_members'].disabled = True
             self.fields['specific_members'].widget.attrs['class'] = 'form-control d-none'
         else:
-            # Superusers can see groups they admin
-            self.fields['group'].queryset = CalendarGroup.objects.filter(admin=user)
+            # For new events, superusers can see groups they admin
+            if not self.instance.pk:
+                self.fields['group'].queryset = CalendarGroup.objects.filter(admin=user)
             
             # Get the group from either the instance or POST data
             group_id = None

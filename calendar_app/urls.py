@@ -17,4 +17,5 @@ urlpatterns = [
     path('api/group-members/<int:group_id>/', views.get_group_members, name='group-members'),
     path('group/<int:pk>/delete/', views.GroupDeleteView.as_view(), name='group-delete'),
     path('api/generate-store-schedule/', views.generate_store_schedule, name='generate_store_schedule'),
+    path('api/search-users/', views.search_users, name='search-users'),
 ]

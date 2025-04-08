@@ -27,3 +27,65 @@
     margin: 0 auto;
     padding: 20px;
 }
+
+#searchResults {
+    position: absolute;
+    z-index: 1000;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid rgba(0,0,0,.125);
+    border-radius: 0.25rem;
+    margin-top: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#selectedMembers {
+    border: 1px solid rgba(0,0,0,.125);
+    border-radius: 0.25rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.remove-member {
+    cursor: pointer;
+}
+
+.list-group-item-action {
+    cursor: pointer;
+}
+
+.list-group-item-action:hover {
+    background-color: #f8f9fa;
+}
+
+#userSearch {
+    margin-bottom: 0.5rem;
+}
+
+.member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+}
+
+.member-item .btn-close {
+    padding: 0.5rem;
+}
+
+.member-item .btn-close:hover {
+    background-color: #dc3545;
+    opacity: 0.8;
+}
+
+.user-result {
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: background-color 0.2s;
+}
+
+.user-result:hover {
+    background-color: #f8f9fa;
+}

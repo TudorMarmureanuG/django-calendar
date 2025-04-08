@@ -324,3 +324,29 @@ def generate_store_schedule(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def search_users(request):
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    query = request.GET.get('q', '').strip()
+    print(f"Searching for users with query: {query}")  # Debug line
+    
+    if len(query) < 2:
+        return JsonResponse({'users': []})
+    
+    try:
+        users = User.objects.filter(
+            username__icontains=query
+        ).exclude(
+            id=request.user.id
+        ).values('id', 'username')[:10]
+        
+        users_data = list(users)
+        print(f"Found users: {users_data}")  # Debug line
+        
+        return JsonResponse({'users': users_data})
+    except Exception as e:
+        print(f"Error in search_users: {str(e)}")  # Debug line
+        return JsonResponse({'error': str(e)}, status=500)
