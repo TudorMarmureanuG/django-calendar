@@ -29,9 +29,14 @@ class EventForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         is_superuser = kwargs.pop('is_superuser', False)
         read_only = kwargs.pop('read_only', False)
+        group_members = kwargs.pop('group_members', None)
+        
         super().__init__(*args, **kwargs)
         
-        # Make all fields read-only if viewing assigned event
+        if self.instance.pk and self.instance.group and not self.instance.is_group_wide:
+            # Filter specific_members to only show group members
+            self.fields['specific_members'].queryset = self.instance.group.members.all()
+        
         if read_only:
             for field in self.fields.values():
                 field.disabled = True
