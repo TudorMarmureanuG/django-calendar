@@ -5,7 +5,7 @@ from django.views.generic import CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db.models import Q
-from django.contrib.auth.models import User  # Add this import
+from django.contrib.auth.models import User, Group  # Add Group to the import
 from .models import Event, CalendarGroup
 from .forms import EventForm, UserRegistrationForm, GroupForm
 from datetime import datetime, timedelta
@@ -350,3 +350,14 @@ def search_users(request):
     except Exception as e:
         print(f"Error in search_users: {str(e)}")  # Debug line
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def store_opening_create(request):
+    if not request.user.is_superuser:
+        return redirect('calendar')
+    
+    # Filter groups to show only those where the current user is admin
+    groups = CalendarGroup.objects.filter(admin=request.user)
+    return render(request, 'calendar_app/store_opening_form.html', {
+        'groups': groups
+    })

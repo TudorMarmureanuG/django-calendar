@@ -18,4 +18,5 @@ urlpatterns = [
     path('group/<int:pk>/delete/', views.GroupDeleteView.as_view(), name='group-delete'),
     path('api/generate-store-schedule/', views.generate_store_schedule, name='generate_store_schedule'),
     path('api/search-users/', views.search_users, name='search-users'),
+    path('store-opening/create/', views.store_opening_create, name='store-opening-create'),
 ]
