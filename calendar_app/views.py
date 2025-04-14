@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from icalendar import Calendar, Event as CalendarEvent
+from django.http import HttpResponse
 
 def register(request):
     if request.method == 'POST':
@@ -361,3 +363,46 @@ def store_opening_create(request):
     return render(request, 'calendar_app/store_opening_form.html', {
         'groups': groups
     })
+
+@login_required
+def export_calendar(request):
+    # Create calendar
+    cal = Calendar()
+    cal.add('prodid', '-//Your Calendar Application//example.com//')
+    cal.add('version', '2.0')
+
+    # Get events based on user type and permissions (similar to calendar_view)
+    user_events = Event.objects.filter(user=request.user)
+    specific_events = Event.objects.filter(specific_members=request.user)
+    group_events = Event.objects.filter(
+        group__members=request.user,
+        is_group_wide=True
+    )
+    
+    if request.user.is_superuser:
+        admin_events = Event.objects.filter(user=request.user)
+    else:
+        admin_events = Event.objects.none()
+    
+    # Combine all events
+    events = user_events | specific_events | group_events | admin_events
+    events = events.distinct()
+
+    # Add events to calendar
+    for event in events:
+        cal_event = CalendarEvent()
+        cal_event.add('summary', event.title)
+        cal_event.add('dtstart', event.start_time)
+        cal_event.add('dtend', event.end_time)
+        cal_event.add('description', event.description or '')
+        cal_event.add('uid', str(event.id) + "@yourcalendar.com")
+        
+        if event.group:
+            cal_event.add('categories', event.group.name)
+        
+        cal.add_component(cal_event)
+
+    # Create response
+    response = HttpResponse(cal.to_ical(), content_type='text/calendar')
+    response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+    return response

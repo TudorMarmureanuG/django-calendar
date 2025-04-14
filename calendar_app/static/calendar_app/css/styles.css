@@ -89,3 +89,20 @@
 .user-result:hover {
     background-color: #f8f9fa;
 }
+
+.navbar {
+    background-color: #004890 !important;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-dark .navbar-brand {
+    color: white !important;
+}
+
+.navbar-logo {
+    height: 40px;
+    margin-right: 10px;
+}

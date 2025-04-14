@@ -14,7 +14,11 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'calendar' %}">Calendar App</a>
+            <a class="navbar-brand" href="{% url 'calendar' %}">
+                {% load static %}
+                <img src="{% static 'calendar_app/images/logo.jpg' %}" alt="Logo" class="navbar-logo">
+                Calendar App
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -23,9 +27,9 @@
                     {% if user.is_authenticated %}
                         {% if user.is_superuser %}
                             <a class="nav-item nav-link" href="{% url 'group-list' %}">Manage Groups</a>
+                            <a class="nav-item nav-link" href="{% url 'store-opening-create' %}">Generate Opening Store</a>
                         {% endif %}
                         <a class="nav-item nav-link" href="{% url 'event-create' %}">New Event</a>
-                        <a class="nav-item nav-link" href="{% url 'store-opening-create' %}">Generate Opening Store</a>
                         <a class="nav-item nav-link" href="{% url 'logout' %}">Logout</a>
                     {% else %}
                         <a class="nav-item nav-link" href="{% url 'login' %}">Login</a>
@@ -38,7 +42,7 @@
 
     <div class="container mt-2">
         <div class="alert alert-info">
-            Debug Info:
+                Debug Info:
             <br>
             Is authenticated: {{ user.is_authenticated }}
             <br>

@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-body">
                     <h2 class="card-title">{% if form.instance.pk %}Edit Event{% else %}Create New Event{% endif %}</h2>
-                    <form method="POST" id="eventForm">
+                    <form method="POST" id="eventForm" data-event-id="{{ form.instance.pk }}">
                         {% csrf_token %}
                         {% for field in form.visible_fields %}
                             <div class="mb-3">
@@ -33,12 +33,12 @@
                         <div class="d-flex justify-content-between">
                             <div>
                                 {% if not form.fields.title.disabled %}
-                                    <button type="submit" class="btn btn-primary">Save Event</button>
+                                    <button type="submit" class="btn btn-primary">Save Event</button><!--
                                     {% if user.is_superuser %}
                                         <button type="button" class="btn btn-info" onclick="generateStoreOpeningSchedule()">
                                             Generate Store Opening Schedule
                                         </button>
-                                    {% endif %}
+                                    {% endif %}-->
                                 {% endif %}
                                 <a href="{% url 'calendar' %}" class="btn btn-secondary">Back</a>
                             </div>

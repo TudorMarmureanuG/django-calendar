@@ -19,4 +19,5 @@ urlpatterns = [
     path('api/generate-store-schedule/', views.generate_store_schedule, name='generate_store_schedule'),
     path('api/search-users/', views.search_users, name='search-users'),
     path('store-opening/create/', views.store_opening_create, name='store-opening-create'),
+    path('export-calendar/', views.export_calendar, name='export-calendar'),
 ]
